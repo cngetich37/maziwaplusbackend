@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-migrate:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          SA_PASSWORD: "Your_strong!Passw0rd"
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Your_strong!Passw0rd -Q \"SELECT 1\"" --health-interval=10s --health-timeout=5s --health-retries=12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Tests
+        run: dotnet test --no-restore --no-build --configuration Release --verbosity normal
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 8.0.0 || true
+
+      - name: Wait for SQL Server
+        run: |
+          echo "Waiting for SQL Server to be available..."
+          for i in {1..30}; do
+            /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Your_strong!Passw0rd -Q "SELECT 1" && break || sleep 2
+          done
+
+      - name: Apply migrations
+        env:
+          ConnectionStrings__DefaultConnection: "Server=127.0.0.1,1433;Database=MaziwaPlusDb;User=sa;Password=Your_strong!Passw0rd;TrustServerCertificate=True;"
+        run: |
+          cd src/MaziwaPlus.Api
+          dotnet ef database update --connection "$ConnectionStrings__DefaultConnection"
