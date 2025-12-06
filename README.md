@@ -1,8 +1,36 @@
-# MaziwaPlus Backend (Scaffold)
+# MaziwaPlus Backend API
 
-This repository contains a scaffold for the MaziwaPlus Backend API — an ASP.NET Core Web API following the copilot instructions at the repo root.
+A robust **ASP.NET Core 8 Web API** for managing milk collection, delivery, and payment operations in the MaziwaPlus milk management system. Built with clean architecture principles, Entity Framework Core, and comprehensive REST endpoints.
 
-Quick start (requires .NET 8 SDK):
+## Overview
+
+MaziwaPlus Backend is a production-ready API that enables farmers, dairy shops, and payment processors to efficiently manage milk supply chain operations. The system tracks milk collections from farmers, deliveries to shops, and payments with comprehensive business logic validation.
+
+**Key Features:**
+- 🚚 **Milk Collection Tracking** — Record farmer milk collections with automatic cost calculations
+- 📦 **Delivery Management** — Track milk deliveries to shops with status workflows
+- 💳 **Payment Processing** — Manage delivery payments with payment status tracking
+- 👨‍🌾 **Farmer Analytics** — Get farmer summaries including total liters collected
+- 📊 **Real-time Aggregation** — Daily milk collection totals and statistics
+- 🔍 **RESTful API** — Clean, documented endpoints with Swagger UI
+- 🛡️ **Data Validation** — Business rule validation at service layer
+- 📱 **Async/Await** — Non-blocking I/O for optimal performance
+- 🧪 **Unit Tested** — 11 comprehensive xUnit tests with Moq mocks
+- 🔄 **CI/CD Ready** — GitHub Actions workflow with SQL Server integration testing
+
+## Tech Stack
+
+- **Framework**: ASP.NET Core 8.0 (.NET 8)
+- **Language**: C# 12 with nullable reference types
+- **Database**: Microsoft SQL Server with Entity Framework Core 8.0.0
+- **Architecture**: Clean Architecture (Domain/Data/Api layers)
+- **Testing**: xUnit 2.4.2 + Moq 4.20.0
+- **Documentation**: Swagger/OpenAPI UI
+- **CI/CD**: GitHub Actions with SQL Server service container
+
+## Quick Start
+
+Requirements: **.NET 8 SDK**
 
 ```pwsh
 cd src/MaziwaPlus.Api
@@ -11,26 +39,33 @@ dotnet build
 dotnet run
 ```
 
-The project uses EF Core with SQL Server. Update `appsettings.json` `DefaultConnection` before running migrations.
+The API will start on `http://localhost:5000` with Swagger UI at the root path.
 
-Recommended local setup for Microsoft SQL Server and EF migrations:
+## Database Setup
 
-1. Create/open the solution and restore packages:
+The project uses Microsoft SQL Server with Entity Framework Core. Update `appsettings.json` before running migrations.
 
-```pwsh
-# from repository root
-dotnet new sln -n MaziwaPlus
-dotnet sln add src/MaziwaPlus.Api/MaziwaPlus.Api.csproj
-dotnet restore
-```
-
-2. Install the `dotnet-ef` tool (if not already installed) and add EF Design package (already added to csproj):
+### Step 1: Install EF Core Tools
 
 ```pwsh
 dotnet tool install --global dotnet-ef --version 8.0.0
 ```
 
-3. Create the initial migration and update the database (ensure `DefaultConnection` in `appsettings.json` points to your SQL Server instance — example below):
+### Step 2: Configure Connection String
+
+Edit `appsettings.json` and update the `DefaultConnection`:
+
+**Option A: LocalDB (Quick Testing)**
+```json
+"DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=MaziwaPlusDb;Integrated Security=true;"
+```
+
+**Option B: SQL Server Instance**
+```json
+"DefaultConnection": "Server=localhost;Database=MaziwaPlusDb;User Id=sa;Password=YourPassword;TrustServerCertificate=True;"
+```
+
+### Step 3: Apply Migrations
 
 ```pwsh
 cd src/MaziwaPlus.Api
@@ -38,125 +73,61 @@ dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
 
-Example SQL Server connection string for `appsettings.json`:
-
-```json
-"DefaultConnection": "Server=localhost;Database=MaziwaPlusDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
-```
-
-Notes:
-- The project targets .NET 8. Use the .NET 8 SDK.
-- If you prefer LocalDB for quick testing, use the existing `appsettings.json` connection string which points to `(localdb)\\mssqllocaldb`.
-
-Quick script:
-
-You can run the provided PowerShell helper to create migrations (if missing) and update the database. Run from repository root:
+Or use the helper script:
 
 ```pwsh
 ./scripts/Update-Database.ps1 -ProjectPath "src/MaziwaPlus.Api"
 ```
 
-This script will install `dotnet-ef` globally if it's not present, create an `InitialCreate` migration when none exist, and run `dotnet ef database update`.
+## API Documentation
 
-CI and tests
------------
+Once running, access **Swagger UI** at: `http://localhost:5000/`
 
-A GitHub Actions workflow is included at `.github/workflows/ci.yml` which builds the solution and applies EF migrations against a SQL Server service container.
+### Available Endpoints
 
-Run unit tests locally:
+#### Collections
+- **POST** `/api/collections` — Add a new milk collection
+  ```json
+  {
+    "farmerId": 1,
+    "collectionDate": "2024-01-15T10:30:00Z",
+    "litersCollected": 50,
+    "ratePerLiter": 2.50
+  }
+  ```
 
-```pwsh
-cd src
-dotnet test
-```
+- **GET** `/api/collections/daily` — Get daily total milk collections
+  ```
+  GET /api/collections/daily?date=2024-01-15
+  ```
 
-Running the API locally
-----------------------
+#### Deliveries
+- **POST** `/api/deliveries` — Record a milk delivery to a shop
+  ```json
+  {
+    "shopId": 1,
+    "deliveryDate": "2024-01-15T14:00:00Z",
+    "litersDelivered": 100
+  }
+  ```
 
-You can run the API project directly with `dotnet run` by specifying the project path, or use the helper script.
+#### Payments
+- **POST** `/api/payments` — Record a payment for a delivery
+  ```json
+  {
+    "deliveryId": 1,
+    "amountPaid": 250.00,
+    "paymentDate": "2024-01-15T15:00:00Z"
+  }
+  ```
 
-From repository root:
+#### Farmers
+- **GET** `/api/farmers/{id}/summary` — Get farmer summary (total liters collected)
+  ```
+  GET /api/farmers/1/summary
+  ```
 
-```pwsh
-# Run the API project directly
-dotnet run --project src/MaziwaPlus.Api
-
-# Or use the helper script (runs dotnet run in the API folder)
-./scripts/Run-Api.ps1
-```
-
-**Important**: Before running the API, ensure migrations have been applied to create the database schema:
-
-```pwsh
-./scripts/Update-Database.ps1 -ProjectPath "src/MaziwaPlus.Api"
-```
-
-Accessing Swagger UI
---------------------
-
-Once the API is running, Swagger/OpenAPI documentation is available at:
-
-```
-http://localhost:5000/swagger/ui
-```
-
-From the Swagger interface, you can:
-- View all available endpoints
-- Read endpoint documentation and parameters
-- Try out endpoints directly with sample data (pre-populated by seed data)
-
-**Note**: Swagger is only enabled in Development environment. For production, remove or conditionally disable it in `Program.cs`.
-
-API Endpoints (Seed Data Included)
-----------------------------------
-
-The following sample data is automatically seeded on first run (Development only):
-- **Farmers**: John Doe (Kisumu), Jane Smith (Nakuru), Peter Kipchoge (Eldoret)
-- **Shops**: Main Dairy Store (Nairobi CBD), Healthy Milk Mart (Westlands), Fresh Milk Kiosk (Karen)
-- **Collections**: 4 sample milk collections with various dates and quantities
-- **Deliveries**: 3 sample deliveries (2 Accepted, 1 Pending)
-- **Payments**: 2 sample payments (both Completed)
-
-**POST /api/collections** — Add a new milk collection
-```json
-{
-  "farmerId": 1,
-  "collectionDate": "2024-01-15T10:30:00Z",
-  "litersCollected": 50,
-  "ratePerLiter": 2.50
-}
-```
-
-**GET /api/collections/daily** — Get daily total milk collections
-Query parameter: `date` (optional, defaults to today)
-```
-GET /api/collections/daily?date=2024-01-15
-```
-
-**POST /api/deliveries** — Record a milk delivery to a shop
-```json
-{
-  "shopId": 1,
-  "deliveryDate": "2024-01-15T14:00:00Z",
-  "litersDelivered": 100
-}
-```
-
-**POST /api/payments** — Record a payment for a delivery
-```json
-{
-  "deliveryId": 1,
-  "amountPaid": 250.00,
-  "paymentDate": "2024-01-15T15:00:00Z"
-}
-```
-
-**GET /api/farmers/{id}/summary** — Get farmer summary (total liters collected)
-```
-GET /api/farmers/1/summary
-```
-
-Example curl commands (once API is running):
+### Sample curl Commands
 
 ```bash
 # Add a milk collection
@@ -181,23 +152,109 @@ curl -X POST http://localhost:5000/api/payments \
 curl http://localhost:5000/api/farmers/1/summary
 ```
 
-Running migrations locally
--------------------------
+## Sample Data
 
-Use the migration helper (creates migration if missing and applies it):
+The database is automatically seeded with sample data on first run (Development environment only):
 
-```pwsh
-./scripts/Update-Database.ps1 -ProjectPath "src/MaziwaPlus.Api"
+- **3 Farmers**: John Doe (Kisumu), Jane Smith (Nakuru), Peter Kipchoge (Eldoret)
+- **3 Shops**: Main Dairy Store (Nairobi CBD), Healthy Milk Mart (Westlands), Fresh Milk Kiosk (Karen)
+- **4 Milk Collections**: Various dates with realistic quantities
+- **3 Deliveries**: Mix of accepted and pending status
+- **2 Payments**: Sample completed payments
+
+Use Swagger UI to explore and test all endpoints with this pre-populated data.
+
+## Project Structure
+
+```
+src/
+├── MaziwaPlus.Domain/        # Domain entities (no dependencies)
+│   └── Entities/
+│       ├── Farmer.cs
+│       ├── MilkCollection.cs
+│       ├── Shop.cs
+│       ├── Delivery.cs
+│       └── Payment.cs
+├── MaziwaPlus.Data/          # Data access layer
+│   ├── MaziwaPlusContext.cs
+│   └── Repositories/
+│       ├── IRepository.cs
+│       └── EfRepository.cs
+├── MaziwaPlus.Api/           # API layer
+│   ├── Controllers/
+│   ├── Services/
+│   ├── Dtos/
+│   └── Program.cs
+└── MaziwaPlus.Tests/         # Unit tests
+    └── *ServiceTests.cs
+
+MaziwaPlus.sln               # Solution file
 ```
 
-Notes:
-- If you prefer a single command to restore/build/run the API from root:
+## Testing
+
+Run all unit tests:
 
 ```pwsh
-dotnet restore
+dotnet test
+```
+
+Run specific test file:
+
+```pwsh
+dotnet test --filter "CollectionServiceTests"
+```
+
+The test suite includes:
+- **CollectionService Tests** (2) — Collection creation and daily aggregation
+- **DeliveryService Tests** (3) — Delivery validation and processing
+- **PaymentService Tests** (3) — Payment validation and processing
+- **FarmerService Tests** (3) — Farmer summary and analytics
+
+All tests use Moq for isolation and xUnit for assertions.
+
+## CI/CD
+
+GitHub Actions workflow (`.github/workflows/ci.yml`) automatically:
+1. Builds the solution
+2. Runs unit tests
+3. Applies EF migrations against SQL Server service container
+
+The workflow ensures code quality and database compatibility on every push.
+
+## Development
+
+### Build the Solution
+
+```pwsh
 dotnet build
-dotnet run --project src/MaziwaPlus.Api
 ```
 
-- Ensure `appsettings.json` `DefaultConnection` points to a reachable SQL Server instance before running migrations or the API.
+### Run the API
+
+```pwsh
+cd src/MaziwaPlus.Api
+dotnet run
+```
+
+Or with environment variable:
+
+```pwsh
+$env:ASPNETCORE_ENVIRONMENT="Development"
+dotnet run
+```
+
+### VS Code Configuration
+
+- **Debug**: Press `F5` or use `.vscode/launch.json` configurations
+- **Build**: Press `Ctrl+Shift+B` or run build task
+- **Test**: Use `dotnet test` command
+
+## License
+
+This project is part of the MaziwaPlus initiative for dairy supply chain management.
+
+## Support
+
+For issues or questions, please create an issue in the repository.
 
